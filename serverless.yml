@@ -1,0 +1,24 @@
+service: tlsposture
+
+frameworkVersion: "^3.23.0"
+
+provider:
+  name: aws
+  runtime: provided.al2
+  region: eu-west-2
+
+package:
+  individually: true
+
+functions:
+  hello:
+    handler: bootstrap
+    package:
+      artifact: bin/hello.zip
+    events:
+      - httpApi:
+          path: /hello
+          method: get
+
+plugins:
+  - serverless-better-credentials # as the first plugin

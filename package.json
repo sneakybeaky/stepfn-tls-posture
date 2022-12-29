@@ -1,0 +1,13 @@
+{
+    "devDependencies": {
+        "serverless": "^3.26.0",
+        "serverless-better-credentials": "^1.1.3"
+    },
+    "name": "tlsposture",
+    "version": "0.0.1",
+    "private": true,
+    "scripts": {
+        "sls": "serverless"
+    },
+    "author": "Jon Barber"
+}

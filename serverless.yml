@@ -19,6 +19,10 @@ functions:
       - httpApi:
           path: /hello
           method: get
+  ssllabs:
+    handler: bootstrap
+    package:
+      artifact: bin/ssllabs.zip
 
 stepFunctions:
   stateMachines:
@@ -48,6 +52,19 @@ stepFunctions:
               Fn::GetAtt: [hello, Arn]
             End: true
   validate: true
+
+resources:
+  Resources:
+    HostsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        BillingMode: PAY_PER_REQUEST
+        KeySchema:
+          - AttributeName: host
+            KeyType: HASH
+        AttributeDefinitions:
+          - AttributeName: host
+            AttributeType: S
 
 plugins:
   - serverless-better-credentials # as the first plugin

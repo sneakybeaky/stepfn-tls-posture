@@ -1,7 +1,8 @@
 {
     "devDependencies": {
         "serverless": "^3.26.0",
-        "serverless-better-credentials": "^1.1.3"
+        "serverless-better-credentials": "^1.1.3",
+        "serverless-step-functions": "^3.11.1"
     },
     "name": "tlsposture",
     "version": "0.0.1",

@@ -1,4 +1,4 @@
-module codedeploy
+module tlsposture
 
 go 1.19
 

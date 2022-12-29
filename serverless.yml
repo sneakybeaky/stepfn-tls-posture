@@ -70,8 +70,14 @@ stepFunctions:
           "Loop through hosts":
             Type: Map
             Iterator:
-              StartAt: Scan URL / Check Status
+              StartAt: Pass
               States:
+                Pass:
+                  Type: Pass
+                  Next: Scan URL / Check Status
+                  Parameters:
+                    status: START
+                    host.$: $.host.S
                 Scan URL / Check Status:
                   Type: Task
                   Resource: 'arn:aws:states:::lambda:invoke'
@@ -79,9 +85,7 @@ stepFunctions:
                   Parameters:
                     FunctionName:
                       Fn::GetAtt: [ssllabs, Arn]
-                    Payload:
-                      status: START
-                      host.$: $.host.S
+                    Payload.$ : $
                   Retry:
                     - ErrorEquals:
                         - Lambda.ServiceException
@@ -91,7 +95,21 @@ stepFunctions:
                       IntervalSeconds: 2
                       MaxAttempts: 6
                       BackoffRate: 2
-                  End: true
+                  Next: Choice
+                Choice:
+                  Type: Choice
+                  Choices:
+                    - Not:
+                        Variable: $.status
+                        StringEquals: READY
+                      Next: Wait for 30 seconds
+                  Default: Success
+                Wait for 30 seconds:
+                  Type: Wait
+                  Seconds: 30
+                  Next: Scan URL / Check Status
+                Success:
+                  Type: Succeed
             End: true
             ItemsPath: $.Items
   validate: true

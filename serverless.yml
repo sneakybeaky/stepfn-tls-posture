@@ -51,6 +51,49 @@ stepFunctions:
             Resource:
               Fn::GetAtt: [hello, Arn]
             End: true
+    sslcheck:
+      role:
+        Fn::GetAtt: [ "StateMachineRole", "Arn" ]
+      tracingConfig:
+        enabled: true
+      name: TLSCheck
+      definition:
+        Comment: A Hello World example of the Amazon States Language using Pass states
+        StartAt: Scan
+        States:
+          Scan:
+            Type: Task
+            Next: "Loop through hosts"
+            Parameters:
+              TableName: !Ref HostsTable
+            Resource: 'arn:aws:states:::aws-sdk:dynamodb:scan'
+          "Loop through hosts":
+            Type: Map
+            Iterator:
+              StartAt: Scan URL / Check Status
+              States:
+                Scan URL / Check Status:
+                  Type: Task
+                  Resource: 'arn:aws:states:::lambda:invoke'
+                  OutputPath: $.Payload
+                  Parameters:
+                    FunctionName:
+                      Fn::GetAtt: [ssllabs, Arn]
+                    Payload:
+                      status: START
+                      host.$: $.host.S
+                  Retry:
+                    - ErrorEquals:
+                        - Lambda.ServiceException
+                        - Lambda.AWSLambdaException
+                        - Lambda.SdkClientException
+                        - Lambda.TooManyRequestsException
+                      IntervalSeconds: 2
+                      MaxAttempts: 6
+                      BackoffRate: 2
+                  End: true
+            End: true
+            ItemsPath: $.Items
   validate: true
 
 resources:
@@ -65,6 +108,33 @@ resources:
         AttributeDefinitions:
           - AttributeName: host
             AttributeType: S
+    StateMachineRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - states.amazonaws.com
+              Action:
+                - sts:AssumeRole
+        Policies:
+          - PolicyName: statePolicy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - lambda:InvokeFunction
+                  Resource:
+                    Fn::GetAtt: [SsllabsLambdaFunction, Arn]
+                - Effect: Allow
+                  Action:
+                    - dynamodb:Scan
+                  Resource:
+                    Fn::GetAtt: [HostsTable, Arn]
+
 
 plugins:
   - serverless-better-credentials # as the first plugin

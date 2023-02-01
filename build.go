@@ -48,15 +48,15 @@ func build(ctx context.Context) error {
 
 		golang = golang.WithExec([]string{"go", "build", "-tags", "lambda.norpc", "-ldflags", "-s -w", "-o", path, "tlsposture/functions/" + fn})
 
-		// get reference to build output directory in container
-		output := golang.Directory("build")
+	}
 
-		// write contents of container build/ directory to the host
-		_, err = output.Export(ctx, "build")
-		if err != nil {
-			return err
-		}
+	// get reference to build output directory in container
+	output := golang.Directory("build")
 
+	// write contents of container build/ directory to the host
+	_, err = output.Export(ctx, "build")
+	if err != nil {
+		return err
 	}
 
 	return nil

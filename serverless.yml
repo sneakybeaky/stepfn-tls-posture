@@ -14,7 +14,7 @@ functions:
   hello:
     handler: bootstrap
     package:
-      artifact: bin/hello.zip
+      artifact: build/hello.zip
     events:
       - httpApi:
           path: /hello
@@ -22,7 +22,7 @@ functions:
   ssllabs:
     handler: bootstrap
     package:
-      artifact: bin/ssllabs.zip
+      artifact: build/ssllabs.zip
 
 stepFunctions:
   stateMachines:

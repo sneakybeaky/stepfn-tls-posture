@@ -26,32 +26,9 @@ functions:
 
 stepFunctions:
   stateMachines:
-    hellostepfunc1:
-      tracingConfig:
-        enabled: true
-      events:
-        - http:
-            path: gofunction
-            method: GET
-        - schedule:
-            rate: rate(10 minutes)
-            enabled: true
-            input:
-              key1: value1
-              key2: value2
-              stageParams:
-                stage: dev
-      name: myStateMachine
-      definition:
-        Comment: "A Hello World example of the Amazon States Language using an AWS Lambda Function"
-        StartAt: HelloWorld1
-        States:
-          HelloWorld1:
-            Type: Task
-            Resource:
-              Fn::GetAtt: [hello, Arn]
-            End: true
-    sslcheck:
+    ebsslcheck:
+      ${file(includes/eb-ssl-check.yml)}
+    sslcheckhosts:
       role:
         Fn::GetAtt: [ "StateMachineRole", "Arn" ]
       tracingConfig:

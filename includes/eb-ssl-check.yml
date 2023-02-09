@@ -1,0 +1,60 @@
+role:
+  Fn::GetAtt: [ "StateMachineRole", "Arn" ]
+tracingConfig:
+  enabled: true
+name: TLSCheck
+definition:
+  Comment: Assesses the TLS posture for a host
+  StartAt: Scan
+  States:
+    Scan:
+      Type: Task
+      Next: "Loop through hosts"
+      Parameters:
+        TableName: !Ref HostsTable
+      Resource: 'arn:aws:states:::aws-sdk:dynamodb:scan'
+    "Loop through hosts":
+      Type: Map
+      Iterator:
+        StartAt: Pass
+        States:
+          Pass:
+            Type: Pass
+            Next: Scan URL / Check Status
+            Parameters:
+              status: START
+              host.$: $.host.S
+          Scan URL / Check Status:
+            Type: Task
+            Resource: 'arn:aws:states:::lambda:invoke'
+            OutputPath: $.Payload
+            Parameters:
+              FunctionName:
+                Fn::GetAtt: [ssllabs, Arn]
+              Payload.$ : $
+            Retry:
+              - ErrorEquals:
+                  - Lambda.ServiceException
+                  - Lambda.AWSLambdaException
+                  - Lambda.SdkClientException
+                  - Lambda.TooManyRequestsException
+                IntervalSeconds: 2
+                MaxAttempts: 6
+                BackoffRate: 2
+            Next: Choice
+          Choice:
+            Type: Choice
+            Choices:
+              - Not:
+                  Variable: $.status
+                  StringEquals: READY
+                Next: Wait for 30 seconds
+            Default: Success
+          Wait for 30 seconds:
+            Type: Wait
+            Seconds: 30
+            Next: Scan URL / Check Status
+          Success:
+            Type: Succeed
+      End: true
+      ItemsPath: $.Items

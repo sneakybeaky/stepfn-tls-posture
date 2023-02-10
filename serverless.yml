@@ -11,14 +11,6 @@ package:
   individually: true
 
 functions:
-  hello:
-    handler: bootstrap
-    package:
-      artifact: build/hello.zip
-    events:
-      - httpApi:
-          path: /hello
-          method: get
   ssllabs:
     handler: bootstrap
     package:

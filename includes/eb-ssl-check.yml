@@ -18,7 +18,7 @@ definition:
       Parameters:
         status: START
         host.$: $.host
-        id.$: $.id
+        requestId.$: $.requestId
     Scan URL / Check Status:
       Type: Task
       Resource: 'arn:aws:states:::lambda:invoke'

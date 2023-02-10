@@ -3,18 +3,96 @@ package main
 import (
 	"context"
 	"fmt"
+	"golang.org/x/sync/errgroup"
 	"os"
+	"time"
 
 	"dagger.io/dagger"
 )
 
 func main() {
-	if err := build(context.Background()); err != nil {
+
+	ctx := context.Background()
+
+	client, err := dagger.Connect(ctx, dagger.WithLogOutput(os.Stdout))
+	if err != nil {
 		fmt.Println(err)
 	}
+	defer client.Close()
+
+	built, err := build(ctx, client.Pipeline("build"))
+
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	for _, d := range built {
+		_, err = d.Export(ctx, "build")
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+	}
+	// write contents of container build/ directory to the host
+	//_, err = output.Export(ctx, "build")
+	//if err != nil {
+	//	return err
+	//}
+
 }
 
-func build(ctx context.Context) error {
+func build(ctx context.Context, client *dagger.Client) ([]*dagger.Directory, error) {
+	fmt.Println("Building with Dagger")
+
+	gocache := client.CacheVolume(time.Now().Weekday().String())
+	g, ctx := errgroup.WithContext(ctx)
+
+	fnnames, err := getFunctionNames()
+
+	if err != nil {
+		return nil, err
+	}
+
+	builds := make([]*dagger.Directory, len(fnnames))
+
+	golang := client.Container().
+		From("golang:latest").
+		WithMountedCache("/cache", gocache).
+		WithEnvVariable("GOMODCACHE", "/cache").
+		WithEnvVariable("GOOS", "linux").
+		WithEnvVariable("GOARCH", "amd64").
+		WithMountedDirectory("/src", client.Host().Directory(".")).WithWorkdir("/src").
+		WithWorkdir("/src")
+
+	for i, fn := range fnnames {
+
+		f := fn
+		id := i
+		g.Go(func() error {
+
+			path := fmt.Sprintf("build/%s/bootstrap", fn)
+
+			builder := golang.
+				WithExec([]string{"go", "mod", "download"}).
+				WithExec([]string{"go", "build", "-tags", "lambda.norpc", "-ldflags", "-s -w", "-o", path, "tlsposture/functions/" + f})
+
+			output := builder.Directory("build")
+			builds[id] = output
+
+			return nil
+		})
+
+	}
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+	return builds, err
+
+}
+
+func oldbuild(ctx context.Context) error {
 	fmt.Println("Building with Dagger")
 
 	fns, err := getFunctionNames()

@@ -20,7 +20,7 @@ func main() {
 	}
 	defer client.Close()
 
-	built, err := build(ctx, client.Pipeline("build"))
+	archives, err := build(ctx, client.Pipeline("build"))
 
 	if err != nil {
 		fmt.Println(err)
@@ -28,23 +28,28 @@ func main() {
 	}
 
 	// write contents of container build/ directory to the host
-	for _, d := range built {
-		_, err = d.Export(ctx, "build")
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+	//for _, archive := range archives {
+	//	ok, err := archive.file.Export(ctx, fmt.Sprintf("build/%s.zip", archive.functionName))
+	//	if err != nil {
+	//		fmt.Println(err)
+	//		os.Exit(1)
+	//	}
+	//
+	//	if !ok {
+	//		fmt.Println("Failed to export build output to host")
+	//		os.Exit(1)
+	//	}
+	//
+	//}
 
-	}
-
-	if err := deploy(ctx, client.Pipeline("Deploy")); err != nil {
+	if err := deploy(ctx, client.Pipeline("Deploy"), archives); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
 }
 
-func deploy(ctx context.Context, client *dagger.Client) error {
+func deploy(ctx context.Context, client *dagger.Client, archives []archive) error {
 
 	// get `node` image
 	node := client.Container().From("node:lts-gallium").
@@ -55,6 +60,10 @@ func deploy(ctx context.Context, client *dagger.Client) error {
 		WithMountedDirectory("/src", client.Host().Directory(".")).
 		WithWorkdir("/src")
 
+	for _, a := range archives {
+		node = node.WithFile(fmt.Sprintf("build/%s.zip", a.functionName), a.file)
+	}
+
 	exitCode, err := node.WithExec([]string{"npm", "install"}).WithExec([]string{"npx", "sls", "deploy", "--verbose"}).ExitCode(ctx)
 	// being executed on
 	fmt.Printf("npx says: %d\n", exitCode)
@@ -63,7 +72,12 @@ func deploy(ctx context.Context, client *dagger.Client) error {
 
 }
 
-func build(ctx context.Context, client *dagger.Client) ([]*dagger.Directory, error) {
+type archive struct {
+	functionName string
+	file         *dagger.File
+}
+
+func build(ctx context.Context, client *dagger.Client) ([]archive, error) {
 	fmt.Println("Building with Dagger")
 
 	gocache := client.CacheVolume(time.Now().Weekday().String())
@@ -75,7 +89,7 @@ func build(ctx context.Context, client *dagger.Client) ([]*dagger.Directory, err
 		return nil, err
 	}
 
-	builds := make([]*dagger.Directory, len(fnnames))
+	zips := make([]archive, len(fnnames))
 
 	golang := client.Container().
 		From("golang:latest").
@@ -109,7 +123,10 @@ func build(ctx context.Context, client *dagger.Client) ([]*dagger.Directory, err
 				WithMountedDirectory("/src/build", output).
 				WithExec([]string{"zip", "-j", fmt.Sprintf("build/%s.zip", f), fmt.Sprintf("build/%s/bootstrap", f)})
 
-			builds[id] = archiver.Directory("build")
+			zips[id] = archive{
+				functionName: f,
+				file:         archiver.File(fmt.Sprintf("build/%s.zip", f)),
+			}
 
 			return nil
 		})
@@ -118,7 +135,7 @@ func build(ctx context.Context, client *dagger.Client) ([]*dagger.Directory, err
 	if err := g.Wait(); err != nil {
 		return nil, err
 	}
-	return builds, err
+	return zips, err
 
 }
 

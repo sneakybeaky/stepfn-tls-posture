@@ -16,6 +16,11 @@ functions:
     package:
       artifact: build/ssllabs.zip
 
+  analyzehost:
+    handler: bootstrap
+    package:
+      artifact: build/analyzehost.zip
+
 stepFunctions:
   stateMachines:
     ebsslcheck:

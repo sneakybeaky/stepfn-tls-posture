@@ -2,7 +2,15 @@ role:
   Fn::GetAtt: [ "StateMachineRole", "Arn" ]
 tracingConfig:
   enabled: true
-name: TLSCheck
+name: TLSCheckHost
+events:
+  - eventBridge:
+      eventBusName: !Ref EventBridge
+      event:
+        source:
+          - "tlsposture.apigw"
+        detail-type:
+          - "Start Scan"
 definition:
   Comment: Assesses the TLS posture for a host
   StartAt: Scan

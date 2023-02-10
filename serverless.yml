@@ -93,6 +93,10 @@ stepFunctions:
 
 resources:
   Resources:
+    EventBridge:
+      Type: AWS::Events::EventBus
+      Properties:
+        Name: ${self:service}-${opt:stage, 'dev'}
     HostsTable:
       Type: AWS::DynamoDB::Table
       Properties:

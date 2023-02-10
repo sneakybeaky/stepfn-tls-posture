@@ -97,7 +97,7 @@ func build(ctx context.Context, client *dagger.Client) ([]*dagger.Directory, err
 		id := i
 		g.Go(func() error {
 
-			path := fmt.Sprintf("build/%s/bootstrap", fn)
+			path := fmt.Sprintf("build/%s/bootstrap", f)
 
 			builder := golang.
 				WithExec([]string{"go", "mod", "download"}).

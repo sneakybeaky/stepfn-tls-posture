@@ -36,7 +36,21 @@ definition:
           IntervalSeconds: 2
           MaxAttempts: 6
           BackoffRate: 2
+      Next: EventBridge PutEvents
+    EventBridge PutEvents:
+      Type: Task
+      Resource: 'arn:aws:states:::events:putEvents'
+      Parameters:
+        Entries:
+          - Detail:
+              requestId.$: $.requestId
+              body.$: $
+            DetailType: ScanLambdaOutput
+            EventBusName:
+              Fn::GetAtt: [EventBridge, Name]
+            Source: ScanStepFN
       Next: Choice
+      ResultPath: null
     Choice:
       Type: Choice
       Choices:

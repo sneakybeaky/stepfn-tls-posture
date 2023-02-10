@@ -66,6 +66,11 @@ func build(ctx context.Context, client *dagger.Client) ([]*dagger.Directory, err
 		WithMountedDirectory("/src", client.Host().Directory(".")).WithWorkdir("/src").
 		WithWorkdir("/src")
 
+	packager := client.Container().From("alpine:3").
+		WithWorkdir("/src").
+		WithExec([]string{"apk", "update"}).
+		WithExec([]string{"apk", "add", "zip"})
+
 	for i, fn := range fnnames {
 
 		f := fn
@@ -79,7 +84,12 @@ func build(ctx context.Context, client *dagger.Client) ([]*dagger.Directory, err
 				WithExec([]string{"go", "build", "-tags", "lambda.norpc", "-ldflags", "-s -w", "-o", path, "tlsposture/functions/" + f})
 
 			output := builder.Directory("build")
-			builds[id] = output
+
+			archiver := packager.
+				WithMountedDirectory("/src/build", output).
+				WithExec([]string{"zip", "-j", fmt.Sprintf("build/%s.zip", f), fmt.Sprintf("build/%s/bootstrap", f)})
+
+			builds[id] = archiver.Directory("build")
 
 			return nil
 		})

@@ -10,6 +10,11 @@ provider:
 package:
   individually: true
 
+
+custom:
+  serverless-iam-roles-per-function:
+    defaultInherit: true
+
 functions:
   ssllabs:
     handler: bootstrap
@@ -20,6 +25,24 @@ functions:
     handler: bootstrap
     package:
       artifact: build/analyzehost.zip
+
+  startanalysis:
+    handler: bootstrap
+    package:
+      artifact: build/startanalysis.zip
+    environment:
+      BUS_NAME:
+        Fn::GetAtt: [ "EventBridge", "Name" ]
+    events:
+      - httpApi:
+          method: GET
+          path: /startscan
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+          - events:PutEvents
+        Resource:
+          Fn::GetAtt: [ "EventBridge", "Arn" ]
 
 stepFunctions:
   stateMachines:
@@ -135,3 +158,4 @@ resources:
 plugins:
   - serverless-better-credentials # as the first plugin
   - serverless-step-functions
+  - serverless-iam-roles-per-function

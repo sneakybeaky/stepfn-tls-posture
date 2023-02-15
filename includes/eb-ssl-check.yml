@@ -36,8 +36,8 @@ definition:
           IntervalSeconds: 2
           MaxAttempts: 6
           BackoffRate: 2
-      Next: EventBridge PutEvents
-    EventBridge PutEvents:
+      Next: Put Scan Update Event
+    Put Scan Update Event:
       Type: Task
       Resource: 'arn:aws:states:::events:putEvents'
       Parameters:
@@ -45,7 +45,7 @@ definition:
           - Detail:
               requestId.$: $.requestId
               body.$: $
-            DetailType: ScanLambdaOutput
+            DetailType: Scan Update
             EventBusName:
               Fn::GetAtt: [EventBridge, Name]
             Source: ScanStepFN
@@ -59,7 +59,20 @@ definition:
             StringMatches: READY
           Next: Wait
           Comment: Not finished
-      Default: Success
+      Default: Scan Completed
+    Scan Completed:
+      Type: Task
+      Resource: 'arn:aws:states:::events:putEvents'
+      Parameters:
+        Entries:
+          - Detail:
+              requestId.$: $.requestId
+              body.$: $
+            DetailType: Scan Finished
+            EventBusName:
+              Fn::GetAtt: [EventBridge, Name]
+            Source: ScanStepFN
+      Next: Success
     Wait:
       Type: Wait
       Seconds: 30

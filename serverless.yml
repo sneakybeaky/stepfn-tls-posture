@@ -1,5 +1,6 @@
 service: tlsposture
 
+
 frameworkVersion: "^3.23.0"
 
 provider:
